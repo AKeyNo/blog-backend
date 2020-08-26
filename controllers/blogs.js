@@ -22,8 +22,8 @@ blogsRouter.post("/", async (request, response, next) => {
   const token = request.token;
 
   const decodedToken = jwt.verify(token, process.env.SECRET);
-  if(!token || !decodedToken.id) {
-    return response.status(401).json({error: 'token is missing or invalid'})
+  if (!token || !decodedToken.id) {
+    return response.status(401).json({ error: "token is missing or invalid" });
   }
 
   const user = await User.findById(decodedToken.id);
@@ -59,8 +59,26 @@ blogsRouter.put("/:id", async (request, response, next) => {
 });
 
 blogsRouter.delete("/:id", async (request, response) => {
-  await Blog.findByIdAndRemove(request.params.id);
-  response.status(204).end();
+  const token = request.token;
+
+  const decodedToken = jwt.verify(token, process.env.SECRET);
+  if (!token || !decodedToken.id) {
+    return response
+      .status(401)
+      .json({ error: "missing or invalid token needed to delete a blog" });
+  }
+
+  const blogToDelete = await Blog.findById(request.params.id);
+
+  if (blogToDelete.user.toString() === decodedToken.id) {
+    await Blog.findByIdAndDelete(blogToDelete._id);
+    response.status(204).end();
+  } else {
+    return response.status(401).json({
+      error:
+        "you are not allowed to delete this post because you aren't the author",
+    });
+  }
 });
 
 module.exports = blogsRouter;
